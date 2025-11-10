@@ -200,3 +200,45 @@ func TestExecuteInstructionOutput(t *testing.T) {
 		t.Errorf("got %s, want %s", got, want)
 	}
 }
+
+func TestParserLoop(t *testing.T) {
+	tests := []struct {
+		name         string
+		instructions string
+		want         string
+	}{
+		{
+			name:         "skip loop output B",
+			instructions: "[impossible]+++++++++++[>++++++<-]>.",
+			want:         "B",
+		},
+		{
+			name:         "output A",
+			instructions: "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
+			want:         "Hello World!\n",
+		},
+		{
+			name:         "output 5",
+			instructions: "+++++[>++++++++++<-]>+++.",
+			want:         "5",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buffer := &bytes.Buffer{}
+			i := New(buffer)
+			i.LoadInstructions(tt.instructions)
+			err := i.ParserLoop()
+			if err != nil {
+				t.Error("expected no error, got error")
+			}
+			err = i.ExecutionLoop()
+			if err != nil {
+				t.Error("expected no error, got error")
+			}
+			if buffer.String() != tt.want {
+				t.Errorf("got %q want %q", buffer.String(), tt.want)
+			}
+		})
+	}
+}
