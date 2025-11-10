@@ -1,4 +1,3 @@
-
 # Brainfuck Interpreter
 
 A Brainfuck interpreter implementation in Go, built using Test-Driven Development.
@@ -9,7 +8,7 @@ Brainfuck is an esoteric programming language with only 8 commands, operating on
 
 ## Why?
 
-So why would I write this? I have used unit testing for years in my code. However, a former Director of Engineering always told me I needed to start doing TDD. I did not get the differences between writing my tests before or after my code. However, reading Modern Software Engineering by David Farley I came to understand the difference. When you start out using TDD you keep your code loosely coupled and your tests behavior driven and not implementation driven. Also instead of TDD seeming like work, it seems to naturally flow with TDD.
+So why would I write this? I have used unit testing for years in my code. However, a former Director of Engineering always told me I needed to start doing TDD (Test Driven Development). I did not get the differences between writing my tests before or after my code. However, reading Modern Software Engineering by David Farley I came to understand the difference. When you start out using TDD you keep your code loosely coupled and your tests behavior driven and not implementation driven. Also instead of DDD (Domain Driven Design) seeming like work, it seems to naturally flow with TDD.
 
 ## Implementation Details
 
@@ -20,16 +19,16 @@ So why would I write this? I have used unit testing for years in my code. Howeve
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `>`     | Move pointer right |
-| `<`     | Move pointer left |
-| `+`     | Increment cell value |
-| `-`     | Decrement cell value |
-| `.`     | Output current cell as ASCII |
+| Command | Description                                           |
+| ------- | ----------------------------------------------------- |
+| `>`     | Move pointer right                                    |
+| `<`     | Move pointer left                                     |
+| `+`     | Increment cell value                                  |
+| `-`     | Decrement cell value                                  |
+| `.`     | Output current cell as ASCII                          |
 | `,`     | Input character to current cell (not yet implemented) |
-| `[`     | Jump past matching `]` if cell is 0 |
-| `]`     | Jump back to matching `[` if cell is non-zero |
+| `[`     | Jump past matching `]` if cell is 0                   |
+| `]`     | Jump back to matching `[` if cell is non-zero         |
 
 ## Running Tests
 
