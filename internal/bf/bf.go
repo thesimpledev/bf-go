@@ -14,12 +14,37 @@ const (
 	tapeSize = 30_000
 )
 
+type opcode byte
+
+const (
+	INC_PTR opcode = iota
+	DEC_PTR
+	INC_VAL
+	DEC_VAL
+	OUTPUT
+	INPUT
+	JUMP_IF_ZERO
+	JUMP_IF_NOT_ZERO
+	ZERO_CELL
+	ZERO_CELL_ADVANCE
+	EMPTY
+	INIT
+)
+
+type instruction struct {
+	op     opcode
+	target int
+	count  int
+	symbol rune
+}
+
 type Interpreter struct {
+	byteCode     []instruction
+	prev         opcode
 	tape         []byte
 	pos          int
 	instructions string
 	w            io.Writer
-	loops        map[int]int
 	stack        *stack.Stack
 	reader       *bufio.Reader
 }
@@ -32,6 +57,7 @@ func New(w io.Writer, r io.Reader) (*Interpreter, error) {
 		tape:   make([]byte, tapeSize),
 		w:      w,
 		reader: bufio.NewReader(r),
+		prev:   INIT,
 	}
 	return client, nil
 }
@@ -44,28 +70,46 @@ func (i *Interpreter) ClearInstructions() {
 	i.instructions = ""
 }
 
-func (i *Interpreter) ParserLoop() error {
+func (i *Interpreter) Compile() error {
 	if len(i.instructions) == 0 {
 		return fmt.Errorf("instructions are empty")
 	}
 
 	i.stack = stack.New()
-	i.loops = make(map[int]int)
+	instPos := 0
+	for num := 0; num < len(i.instructions); num++ {
 
-	for num, instruction := range i.instructions {
-		switch instruction {
-		case '[':
-			i.stack.Push(num)
-		case ']':
+		inst := instruction{
+			count: 1,
+		}
+		inst.symbol = rune(i.instructions[num])
+		op, jump := getOpCode(num, inst.symbol, i.instructions)
+		if op == EMPTY {
+			continue
+		}
+		inst.op = op
+		num += jump
+		if i.prev == inst.op && inst.op != JUMP_IF_ZERO && inst.op != JUMP_IF_NOT_ZERO {
+			i.byteCode[instPos-1].count++
+			continue
+		}
+
+		if inst.op == JUMP_IF_ZERO {
+			i.stack.Push(instPos)
+		}
+
+		if inst.op == JUMP_IF_NOT_ZERO {
 			start, exists := i.stack.Pop()
 			if !exists {
 				return errors.New("invalid loop. all [ must have a matching ]")
 			}
-			i.loops[start] = num
-			i.loops[num] = start
-		default:
-			continue
+			inst.target = start
+			i.byteCode[start].target = instPos
 		}
+
+		i.prev = inst.op
+		i.byteCode = append(i.byteCode, inst)
+		instPos++
 	}
 
 	if i.stack.Len() != 0 {
@@ -75,81 +119,129 @@ func (i *Interpreter) ParserLoop() error {
 	return nil
 }
 
-func (i *Interpreter) ExecutionLoop() error {
+func getOpCode(pos int, symbol rune, inst string) (opcode, int) {
+	word3 := 3
+	word4 := 4
+
+	if pos+word3 < len(inst) && inst[pos:pos+word3] == "[-]" {
+		return ZERO_CELL, word3 - 1
+	}
+
+	if pos+word4 < len(inst) && inst[pos:pos+word4] == "[-]>" {
+		return ZERO_CELL_ADVANCE, word4 - 1
+	}
+
+	switch symbol {
+	case '>':
+		return INC_PTR, 0
+	case '<':
+		return DEC_PTR, 0
+	case '+':
+		return INC_VAL, 0
+	case '-':
+		return DEC_VAL, 0
+	case '.':
+		return OUTPUT, 0
+	case ',':
+		return INPUT, 0
+	case '[':
+		return JUMP_IF_ZERO, 0
+	case ']':
+		return JUMP_IF_NOT_ZERO, 0
+	default:
+		return EMPTY, 0
+	}
+}
+
+func (i *Interpreter) VM() error {
 	if len(i.instructions) == 0 {
 		return fmt.Errorf("instructions are empty")
 	}
-	for inst := 0; inst < len(i.instructions); inst++ {
-		switch i.instructions[inst] {
-		case '>':
-			i.shiftRight()
-		case '<':
-			i.shiftLeft()
-		case '+':
-			i.increment()
-		case '-':
-			i.decrement()
-		case '.':
-			i.output()
-		case '[':
-			inst = i.startLoop(inst)
-		case ']':
-			inst = i.endLoop(inst)
-		case ',':
+	for num := 0; num < len(i.byteCode); num++ {
+		inst := i.byteCode[num]
+		switch inst.op {
+		case INC_PTR:
+			i.shiftRight(inst)
+		case DEC_PTR:
+			i.shiftLeft(inst)
+		case INC_VAL:
+			i.increment(inst)
+		case DEC_VAL:
+			i.decrement(inst)
+		case OUTPUT:
+			i.output(inst)
+		case JUMP_IF_ZERO:
+			num = i.startLoop(num, inst)
+		case JUMP_IF_NOT_ZERO:
+			num = i.endLoop(num, inst)
+		case INPUT:
 			err := i.collectUserInput()
 			if err != nil {
 				return fmt.Errorf("unable to collect user input %v", err)
 			}
-		default:
-			continue
+		case ZERO_CELL:
+			i.zeroCell()
+		case ZERO_CELL_ADVANCE:
+			i.zeroCellAdvance(inst)
 		}
 	}
 
 	return nil
 }
 
-func (i *Interpreter) shiftRight() {
-	if i.pos == tapeSize-1 {
-		i.pos = 0
-		return
+func (i *Interpreter) shiftRight(inst instruction) {
+	for num := 0; num < inst.count; num++ {
+
+		if i.pos == tapeSize-1 {
+			i.pos = 0
+			continue
+		}
+		i.pos++
 	}
-	i.pos++
 }
 
-func (i *Interpreter) shiftLeft() {
-	if i.pos == 0 {
-		i.pos = tapeSize - 1
-		return
+func (i *Interpreter) shiftLeft(inst instruction) {
+	for num := 0; num < inst.count; num++ {
+		if i.pos == 0 {
+			i.pos = tapeSize - 1
+			continue
+		}
+		i.pos--
 	}
-	i.pos--
 }
 
-func (i *Interpreter) increment() {
-	i.tape[i.pos]++
-}
-
-func (i *Interpreter) decrement() {
-	i.tape[i.pos]--
-}
-
-func (i *Interpreter) output() {
-	_, _ = fmt.Fprintf(i.w, "%c", i.tape[i.pos])
-}
-
-func (i *Interpreter) startLoop(inst int) int {
-	if i.tape[i.pos] == 0 {
-		return i.loops[inst]
+func (i *Interpreter) increment(inst instruction) {
+	for num := 0; num < inst.count; num++ {
+		i.tape[i.pos]++
 	}
-
-	return inst
 }
 
-func (i *Interpreter) endLoop(inst int) int {
+func (i *Interpreter) decrement(inst instruction) {
+	for num := 0; num < inst.count; num++ {
+		i.tape[i.pos]--
+	}
+}
+
+func (i *Interpreter) output(inst instruction) {
+	for range inst.count {
+		_, _ = fmt.Fprintf(i.w, "%c", i.tape[i.pos])
+	}
+}
+
+func (i *Interpreter) startLoop(pos int, inst instruction) int {
 	if i.tape[i.pos] != 0 {
-		return i.loops[inst] - 1
+		return pos
 	}
 
-	return inst
+	return inst.target - 1
+}
+
+func (i *Interpreter) endLoop(pos int, inst instruction) int {
+	if i.tape[i.pos] == 0 {
+		return pos
+	}
+
+	return inst.target
 }
 
 func (i *Interpreter) collectUserInput() error {
@@ -165,4 +257,18 @@ func (i *Interpreter) collectUserInput() error {
 func (i *Interpreter) readChar() (rune, error) {
 	char, _, err := i.reader.ReadRune()
 	return char, err
+}
+
+func (i *Interpreter) zeroCell() {
+	i.tape[i.pos] = 0
+}
+
+func (i *Interpreter) zeroCellAdvance(inst instruction) {
+	for range inst.count {
+		i.zeroCell()
+		specInst := instruction{
+			count: 1,
+		}
+		i.shiftRight(specInst)
+	}
 }
