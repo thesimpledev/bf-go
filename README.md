@@ -4,8 +4,7 @@ A Brainfuck interpreter implementation in Go, built using Test-Driven Developmen
 
 ## What is Brainfuck?
 
-Brainfuck is an esoteric programming language with only 8 commands, operating on a 30,000-byte tape with a movable pointer.
-
+Brainfuck is an esoteric programming language with only 8 commands, operating on a 30,000-byte tape with a movable pointer. Brainfuck was created by Urban Müller in 1993. You can read more about it on [Wikipedia](https://en.wikipedia.org/wiki/Brainfuck).
 ## Why?
 
 So why would I write this? I have used unit testing for years in my code. However, a former Director of Engineering always told me I needed to start doing TDD (Test Driven Development). I did not get the differences between writing my tests before or after my code. However, reading Modern Software Engineering by David Farley I came to understand the difference. When you start out using TDD you keep your code loosely coupled and your tests behavior driven and not implementation driven. Also instead of DDD (Domain Driven Design) seeming like work, it seems to naturally flow with TDD.
