@@ -26,7 +26,7 @@ So why would I write this? I have used unit testing for years in my code. Howeve
 | `+`     | Increment cell value                                  |
 | `-`     | Decrement cell value                                  |
 | `.`     | Output current cell as ASCII                          |
-| `,`     | Input character to current cell (not yet implemented) |
+| `,`     | Input character to current cell                       |
 | `[`     | Jump past matching `]` if cell is 0                   |
 | `]`     | Jump back to matching `[` if cell is non-zero         |
 
@@ -46,8 +46,3 @@ just test-full
 just test-open
 ```
 
-## TODO
-
-- [ ] Implement `,` (input) command
-- [ ] Add more edge case testing
-- [ ] Test nested loop scenarios
