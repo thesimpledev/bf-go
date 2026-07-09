@@ -35,7 +35,7 @@ type instruction struct {
 	op     opcode
 	target int
 	count  int
-	symbol rune
+	symbol byte
 }
 
 type Interpreter struct {
@@ -82,7 +82,7 @@ func (i *Interpreter) Compile() error {
 		inst := instruction{
 			count: 1,
 		}
-		inst.symbol = rune(i.instructions[num])
+		inst.symbol = i.instructions[num]
 		op, jump := getOpCode(num, inst.symbol, i.instructions)
 		if op == EMPTY {
 			continue
@@ -119,7 +119,7 @@ func (i *Interpreter) Compile() error {
 	return nil
 }
 
-func getOpCode(pos int, symbol rune, inst string) (opcode, int) {
+func getOpCode(pos int, symbol byte, inst string) (opcode, int) {
 	word3 := 3
 	word4 := 4
 
@@ -224,7 +224,7 @@ func (i *Interpreter) decrement(inst instruction) {
 
 func (i *Interpreter) output(inst instruction) {
 	for range inst.count {
-		_, _ = fmt.Fprintf(i.w, "%c", i.tape[i.pos])
+		_, _ = i.w.Write([]byte{i.tape[i.pos]})
 	}
 }
 
@@ -250,13 +250,12 @@ func (i *Interpreter) collectUserInput() error {
 		return fmt.Errorf("error reading character: %v", err)
 	}
 
-	i.tape[i.pos] = byte(input)
+	i.tape[i.pos] = input
 	return nil
 }
 
-func (i *Interpreter) readChar() (rune, error) {
-	char, _, err := i.reader.ReadRune()
-	return char, err
+func (i *Interpreter) readChar() (byte, error) {
+	return i.reader.ReadByte()
 }
 
 func (i *Interpreter) zeroCell() {

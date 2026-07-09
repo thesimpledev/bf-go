@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"unicode/utf8"
 )
 
 func TestNew(t *testing.T) {
@@ -265,7 +264,7 @@ func TestOutput(t *testing.T) {
 		count: 1,
 	}
 	i.decrement(inst)
-	want := string(byte(255))
+	want := "\xff"
 	inst = instruction{
 		op:    OUTPUT,
 		count: 1,
@@ -289,7 +288,7 @@ func TestExecuteInstructionOutput(t *testing.T) {
 	if err != nil {
 		t.Errorf("Compile got %v and expected no error", err)
 	}
-	want := string(byte(255))
+	want := "\xff"
 	err = i.VM()
 	if err != nil {
 		t.Errorf("expected no error got error %v", err)
@@ -372,9 +371,8 @@ func TestClearInstructions(t *testing.T) {
 
 func TestReadChar(t *testing.T) {
 	buffer := &bytes.Buffer{}
-	want := "a"
-	wantRune, _ := utf8.DecodeRuneInString(want)
-	input := strings.NewReader(want)
+	want := byte('a')
+	input := strings.NewReader("a")
 
 	i, err := New(buffer, input)
 	if err != nil {
@@ -385,8 +383,8 @@ func TestReadChar(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	if char != wantRune {
-		t.Errorf("expected %c got %c", wantRune, char)
+	if char != want {
+		t.Errorf("expected %c got %c", want, char)
 	}
 }
 
